@@ -1,0 +1,67 @@
+.class public Lmoe/enx/payload/PayloadActivity;
+
+
+
+# Activity constructor. The actual code is injected here
+.method static constructor <clinit>()V
+    .locals __ENX_LOCALS_NUM__
+
+    __ENX_CONSTRUCTOR_INIT__
+
+    return-void
+.end method
+
+
+
+__ENX_DEFAULT_OBJECT_METHODS__
+
+
+# Other helper methods are defined below
+
+
+# ENXHACK Function to log trace
+# Code usage: invoke-static {}, LCURRENT_FILE;->enxLogStackTrace()V
+
+.method public static enxLogStackTrace()V
+    .locals 3
+
+    .prologue
+    new-instance v0, Ljava/lang/Throwable;
+
+    invoke-direct {v0}, Ljava/lang/Throwable;-><init>()V
+
+    new-instance v1, Ljava/io/StringWriter;
+
+    invoke-direct {v1}, Ljava/io/StringWriter;-><init>()V
+
+    new-instance v2, Ljava/io/PrintWriter;
+
+    invoke-direct {v2, v1}, Ljava/io/PrintWriter;-><init>(Ljava/io/Writer;)V
+
+    invoke-virtual {v0, v2}, Ljava/lang/Throwable;->printStackTrace(Ljava/io/PrintWriter;)V
+
+    invoke-virtual {v1}, Ljava/io/StringWriter;->toString()Ljava/lang/String;
+
+    move-result-object v0
+
+    const-string v1, "ENXHACK_STRACE"
+
+    invoke-static {v1, v0}, Landroid/util/Log;->d(Ljava/lang/String;Ljava/lang/String;)I
+
+    return-void
+.end method
+
+
+# ENXHACK Function to log a string
+# Code usage: invoke-static {STRING_REGISTER}, LCURRENT_FILE;->enxLog()V
+
+.method public static enxLog(Ljava/lang/String;)V
+    .locals 2
+
+    .prologue
+    const-string v1, "ENXHACK_LOG"
+
+    invoke-static {v1, p0}, Landroid/util/Log;->d(Ljava/lang/String;Ljava/lang/String;)I
+
+    return-void
+.end method

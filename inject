@@ -1,0 +1,32 @@
+#!/bin/bash
+set -e
+
+if [[ $# -lt 2 ]]; then
+	echo "Bad arguments"
+	echo "Usage: inject [init/methods/locals] path-to-template"
+	exit
+fi
+
+# Strip .template postfix
+
+
+if [[ $1 -eq "locals" ]]; then
+	INPUT="$(read)"
+	OUTPUT="$(echo $INPUT | xargs sed -e "s/__ENX_LOCALS_NUM__/%/" $2)"
+	echo "$OUTPUT"
+	exit
+fi
+
+if [[ $1 -eq "init" ]]; then
+	INPUT="$(read)"
+	OUTPUT="$(echo $INPUT | xargs sed -e "s/__ENX_CONSTRUCTOR_INIT__/%/" $2)"
+	echo "$OUTPUT"
+	exit
+fi
+
+if [[ $1 -eq "methods" ]]; then
+	INPUT="$(read)"
+	OUTPUT="$(echo $INPUT | xargs sed -e "s/__ENX_DEFAULT_OBJECT_METHODS__/%/" $2)"
+	echo "$OUTPUT"
+	exit
+fi
