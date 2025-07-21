@@ -1,0 +1,43 @@
+#!/bin/bash
+set -e
+
+if [[ -z $APKTOOL || -z $ANDROID_HOME ]]; then
+	echo "Usage: APKTOOL=path-to-apktool ANDROID_HOME=path-to-sdk-bin compile"
+	echo "Compiles and signs the apk"
+	exit 1
+fi
+
+# check if we need to append java -jar
+if [[ $APKTOOL == "java"* ]]; then
+	APKTOOL_CMD=$APKTOOL
+else
+	if [[ $APKTOOL == *"jar" ]]; then
+		APKTOOL_CMD="java -jar $APKTOOL"
+	else
+		APKTOOL_CMD=$APKTOOL
+	fi
+fi
+
+# find sdk version
+LATEST_SDK="$ANDROID_HOME/build-tools/$(ls -1 $ANDROID_HOME/build-tools/ | sort -V | tail -n 1)"
+APKSIGNER="$LATEST_SDK/apksigner"
+ZIPALIGN="$LATEST_SDK/zipalign"
+
+# check if the keystore is present
+if [[ ! -f "./.payload_keystore" ]]; then
+	echo $'payload\npayload\n\n\n\n\n\n\nyes\n' | keytool -genkey -keystore ./.payload_keystore -keyalg RSA -alias DO_NOT_USE_payload
+fi
+
+# BUILDING APK
+# ============
+
+# compile the app
+$APKTOOL_CMD b payload
+
+# zip the apk
+$ZIPALIGN -p -f 4 payload/dist/payload_unaligned.apk payload/dist/payload.apk
+
+# sign with a temporary key
+$APKSIGNER sign --v2-signing-enabled --ks ./.payload_keystore --ks-pass pass:payload payload/dist/payload.apk 
+
+echo "apk file payload/dist/payload.apk compiled successfully. You may run the deploy script"

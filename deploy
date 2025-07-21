@@ -1,0 +1,17 @@
+#!/bin/bash
+set -e
+
+# initializing connection...
+adb devices
+
+adb install ./payload/dist/payload.apk
+
+CUR_TIME=$(date +"%m-%d %H:%M:%S.000")
+
+# run the payload
+adb shell am start -n moe.enx.payload/moe.enx.payload.PayloadActivity
+
+# clear, gather the logs and find ENXHACK
+echo "-------payload--------"
+adb logcat -t "$CUR_TIME"
+echo "----end of payload----"

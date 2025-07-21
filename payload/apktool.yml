@@ -1,5 +1,5 @@
 version: 2.9.3
-apkFileName: payload.apk
+apkFileName: payload_unaligned.apk
 isFrameworkApk: false
 usesFramework:
   ids:
@@ -8,8 +8,7 @@ usesFramework:
 sdkInfo:
   minSdkVersion: 29
 packageInfo:
-  forcedPackageId: 1
-  renameManifestPackage: moe.enx.nekogram
+  forcedPackageId: 0
 versionInfo:
   versionCode: 1
   versionName: 1.0.0
