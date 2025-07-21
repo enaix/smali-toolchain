@@ -63,6 +63,7 @@ int replace_single(int fd, int out_fd, int subst_fd, const char* pattern, const 
 		if (bytes == -1)
 		{
 			// handle err
+			return 1;
 		}
 		read_size += bytes;
 		if (bytes == 0)
@@ -74,6 +75,10 @@ int replace_single(int fd, int out_fd, int subst_fd, const char* pattern, const 
 
 	buf2[read_size] = '\0'; // actual size is larger by 2 bytes
 	
+	#ifdef ENABLE_DEBUG
+	printf("initializing main pattern search loop...\n");
+	#endif
+
 	// search for the pattern
 	while(1)
 	{
@@ -83,13 +88,21 @@ int replace_single(int fd, int out_fd, int subst_fd, const char* pattern, const 
 		int pattern_pos = find_buf2(pattern, buf2);
 
 		// write_buf2 may not write the second half of the buffer, so we would need to write remaining characters later
-		write_buf2(out_fd, buf2, pattern_pos, buf_single_size, read_size, eof);
+		int res = write_buf2(out_fd, buf2, pattern_pos, buf_single_size, read_size, eof);
+		#ifdef ENABLE_DEBUG
+		printf("main pattern search loop : pattern pos: %d, written %d/%d bytes back to buf\n", pattern_pos, res, read_size);
+		#endif
 
 		if (pattern_pos != -1)
 		{
 			// handle the found pattern
 			if (!do_replace(out_fd, subst_fd, leave_pattern, pattern, pattern_size))
+			{
+				#ifdef ENABLE_DEBUG
+				printf("do_replace() returned with an error\n");
+				#endif
 				return 0;
+			}
 			// dump the rest of the buffer
 			write_buf2_end(out_fd, buf2, pattern_pos, pattern_size, read_size);
 			break; // exit the loop - write the remaining file
@@ -106,6 +119,7 @@ int replace_single(int fd, int out_fd, int subst_fd, const char* pattern, const 
 					if (bytes == -1)
 					{
 						// handle err
+						return 1;
 					}
 					read_size += bytes;
 					if (bytes == 0)
@@ -119,6 +133,10 @@ int replace_single(int fd, int out_fd, int subst_fd, const char* pattern, const 
 		}
 	}
 
+	#ifdef ENABLE_DEBUG
+	printf("finised main pattern search loop, writing the rest of the data...\n");
+	#endif
+
 	if (eof) return 1; // Nothing to write
 
 	// Write the rest of the file
@@ -130,6 +148,7 @@ int replace_single(int fd, int out_fd, int subst_fd, const char* pattern, const 
 			if (bytes == -1)
 			{
 				// handle err
+				return 1;
 			}
 			read_size += bytes;
 			if (bytes == 0)

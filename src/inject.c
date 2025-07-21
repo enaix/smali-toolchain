@@ -33,7 +33,7 @@ int output_logic(char* output, int* in_fd, int* out_fd)
 		prev = tok;
 	}
 	// last operation
-	if (strcmp(prev, "template") == 0)
+	if (strcmp(prev, "template") != 0)
 	{
 		// then we have to move this file to .template.bak
 		char new_fname[INJECT_PATH_MAX];
@@ -57,7 +57,7 @@ int output_logic(char* output, int* in_fd, int* out_fd)
 			return 0;
 		}
 
-		*out_fd = open(fname, O_WRONLY, 0640);
+		*out_fd = open(fname, O_WRONLY|O_CREAT|O_TRUNC, 0640);
 		if (*out_fd == -1)
 		{
 			close_fd(*in_fd, *out_fd, -1);
@@ -66,7 +66,7 @@ int output_logic(char* output, int* in_fd, int* out_fd)
 		}
 	} else {
 		// Output .smali file
-		*out_fd = open(fname, O_WRONLY, 0640);
+		*out_fd = open(fname, O_WRONLY|O_CREAT|O_TRUNC, 0640);
 		if (*out_fd == -1)
 		{
 			// handle err

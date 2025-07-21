@@ -8,10 +8,10 @@ TARGETS = inject
 INCLUDE = -I.
 LINK = 
 
-.DEFAULT_GOAL := release
+.DEFAULT_GOAL := debug
 
 .PHONY: all
-all: release
+all: debug
 
 prerun:
 	$(shell mkdir -p build)
