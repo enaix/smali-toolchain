@@ -6,14 +6,14 @@
 .method static constructor <clinit>()V
     .locals __ENX_LOCALS_NUM__
 
-    __ENX_CONSTRUCTOR_INIT__
+    #__ENX_CONSTRUCTOR_INIT__
 
     return-void
 .end method
 
 
 
-__ENX_DEFAULT_OBJECT_METHODS__
+#__ENX_DEFAULT_OBJECT_METHODS__
 
 
 # Other helper methods are defined below
@@ -53,7 +53,7 @@ __ENX_DEFAULT_OBJECT_METHODS__
 
 
 # ENXHACK Function to log a string
-# Code usage: invoke-static {STRING_REGISTER}, LCURRENT_FILE;->enxLog()V
+# Code usage: invoke-static {STRING_REGISTER}, LCURRENT_FILE;->enxLog(Ljava/lang/String)V
 
 .method public static enxLog(Ljava/lang/String;)V
     .locals 2
