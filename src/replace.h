@@ -10,7 +10,8 @@
 
 
 #define BUF_ACTUAL_SIZE 256
-#define BUF_SIZE_SINGLE BUF_ACTUAL_SIZE - 1 // Reserve 1 for '\0', but we cannot reserve only one char for the double buffer
+// Reserve 1 for '\0', but we cannot reserve only one char for the double buffer
+#define BUF_SIZE_SINGLE (BUF_ACTUAL_SIZE - 1)
 
 #define SUBST_BUF_SIZE 256
 
@@ -26,7 +27,7 @@ int do_replace(int out_fd, int subst_fd, int leave_pattern, const char* pattern,
 			ssize_t bytes = read(subst_fd, subst, SUBST_BUF_SIZE - read_size); // read remaining bytes
 			if (bytes == -1)
 			{
-				// handle err
+				fmt_error("do_replace()", "read");
 				return 0;
 			}
 			read_size += bytes;
@@ -39,11 +40,11 @@ int do_replace(int out_fd, int subst_fd, int leave_pattern, const char* pattern,
 		
 		// Since we're not using str* functions, we shouldn't null-terminate the string
 		// use read_size as actual buf_size
-		replace_buf2(out_fd, subst, read_size);	
+		replace_buf2(out_fd, subst, read_size, 0);	
 	} while (!eof);
 	
 	if (leave_pattern)
-		replace_buf2(out_fd, pattern, pattern_size);
+		replace_buf2(out_fd, pattern, pattern_size, 1);
 	
 	return 1;
 }
@@ -62,8 +63,8 @@ int replace_single(int fd, int out_fd, int subst_fd, const char* pattern, const 
 		ssize_t bytes = read(fd, buf2, BUF_SIZE_SINGLE * 2 - read_size); // read remaining bytes
 		if (bytes == -1)
 		{
-			// handle err
-			return 1;
+			fmt_error("replace_single()", "read");
+			return 0;
 		}
 		read_size += bytes;
 		if (bytes == 0)
@@ -76,7 +77,7 @@ int replace_single(int fd, int out_fd, int subst_fd, const char* pattern, const 
 	buf2[read_size] = '\0'; // actual size is larger by 2 bytes
 	
 	#ifdef ENABLE_DEBUG
-	printf("initializing main pattern search loop...\n");
+	printf("initializing main pattern search loop, buffered %d/%d bytes (EOF=%d)...\n", read_size, BUF_SIZE_SINGLE*2, eof);
 	#endif
 
 	// search for the pattern
@@ -89,8 +90,13 @@ int replace_single(int fd, int out_fd, int subst_fd, const char* pattern, const 
 
 		// write_buf2 may not write the second half of the buffer, so we would need to write remaining characters later
 		int res = write_buf2(out_fd, buf2, pattern_pos, buf_single_size, read_size, eof);
+		if (res == -1)
+		{
+			printf("replace_single() : could not write first part of the buffer\n");
+			return 0;
+		}
 		#ifdef ENABLE_DEBUG
-		printf("main pattern search loop : pattern pos: %d, written %d/%d bytes back to buf\n", pattern_pos, res, read_size);
+		printf("main pattern search loop : pattern pos: %d, written %d/%d bytes back to buf (EOF=%d)\n", pattern_pos, res, read_size, eof);
 		#endif
 
 		if (pattern_pos != -1)
@@ -98,18 +104,23 @@ int replace_single(int fd, int out_fd, int subst_fd, const char* pattern, const 
 			// handle the found pattern
 			if (!do_replace(out_fd, subst_fd, leave_pattern, pattern, pattern_size))
 			{
-				#ifdef ENABLE_DEBUG
-				printf("do_replace() returned with an error\n");
-				#endif
+				printf("replace_single() : failed to replace the pattern\n");
 				return 0;
 			}
 			// dump the rest of the buffer
-			write_buf2_end(out_fd, buf2, pattern_pos, pattern_size, read_size);
+			if (!write_buf2_end(out_fd, buf2, pattern_pos, pattern_size, read_size))
+			{
+				printf("replace_single() : failed to dump the remaining buffer to file\n");
+				return 0;
+			}
 			break; // exit the loop - write the remaining file
 		} else {
-			// move the double buffer and read the rest
+			// move the double buffer and read the rest. The buffer is full
 			if (!eof)
 			{
+				#ifdef ENABLE_DEBUG
+				printf("moving [%d-%d) chars (%d total) to start\n", BUF_SIZE_SINGLE, read_size, read_size - BUF_SIZE_SINGLE);
+				#endif
 				move_buf2(buf2, BUF_SIZE_SINGLE, read_size);
 				read_size = 0;
 
@@ -118,8 +129,8 @@ int replace_single(int fd, int out_fd, int subst_fd, const char* pattern, const 
 					ssize_t bytes = read(fd, buf2 + BUF_SIZE_SINGLE, BUF_SIZE_SINGLE - read_size);
 					if (bytes == -1)
 					{
-						// handle err
-						return 1;
+						fmt_error("replace_single()", "read");
+						return 0;
 					}
 					read_size += bytes;
 					if (bytes == 0)
@@ -129,6 +140,7 @@ int replace_single(int fd, int out_fd, int subst_fd, const char* pattern, const 
 					}
 				} while (unlikely(read_size < BUF_SIZE_SINGLE));
 				read_size += BUF_SIZE_SINGLE; // since the first half of the buffer is still present
+				buf2[read_size] = '\0'; // there is extra space
 			} else return 1; // reached EOF, nothing to do now - 
 		}
 	}
@@ -147,8 +159,8 @@ int replace_single(int fd, int out_fd, int subst_fd, const char* pattern, const 
 			ssize_t bytes = read(fd, buf2, BUF_SIZE_SINGLE * 2 - read_size);
 			if (bytes == -1)
 			{
-				// handle err
-				return 1;
+				fmt_error("replace_single()", "read");
+				return 0;
 			}
 			read_size += bytes;
 			if (bytes == 0)
@@ -157,7 +169,11 @@ int replace_single(int fd, int out_fd, int subst_fd, const char* pattern, const 
 				break; // done reading, buf size is smaller!
 			}
 		} while (unlikely(read_size < BUF_SIZE_SINGLE * 2));
-		write_buf2_end(out_fd, buf2, -1, pattern_size, read_size);
+		if (!write_buf2_end(out_fd, buf2, -1, pattern_size, read_size))
+		{
+			printf("replace_single() : failed to write remaining file to output\n");
+			return 0;
+		}
 	} while (!eof);
 	return 1;
 }

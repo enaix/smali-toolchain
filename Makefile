@@ -1,17 +1,17 @@
 C=gcc
 CFLAGS = -Wall  #-Werror=return-type
 
-CFLAGS_DEBUG = -g -DENABLE_DEBUG -O2
+CFLAGS_DEBUG = -g -DENABLE_DEBUG
 CFLAGS_RELEASE = -O3 -DNDEBUG
 
 TARGETS = inject
 INCLUDE = -I.
 LINK = 
 
-.DEFAULT_GOAL := debug
+.DEFAULT_GOAL := all
 
 .PHONY: all
-all: debug
+all: release
 
 prerun:
 	$(shell mkdir -p build)

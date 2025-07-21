@@ -4,12 +4,27 @@
 #include <stdlib.h>
 #include <string.h>
 #include <assert.h>
+#include <errno.h>
 
 
 #ifndef likely
 #define likely(x)       __builtin_expect(!!(x), 1)
 #define unlikely(x)     __builtin_expect(!!(x), 0)
 #endif
+
+
+void close_fd(int in_fd, int out_fd, int subst_fd)
+{
+	if (in_fd != -1) close(in_fd);
+	if (out_fd != -1) close(out_fd);
+	if (subst_fd != -1) close(subst_fd);
+}
+
+
+void fmt_error(const char* where, const char* call)
+{
+	printf("%s : %s failed : %s\n", where, call, strerror(errno));
+}
 
 
 /* 
@@ -94,7 +109,8 @@ int write_buf2(int fd, const char* src, int pattern_pos, const int buf_size_half
 		ssize_t bytes = write(fd, src, total - written);
 		if (bytes == -1)
 		{
-			// handle err
+			fmt_error("write_buf2()", "write");
+			return -1;
 		}
 		written += bytes;
 	} while (unlikely(written < total));
@@ -142,17 +158,29 @@ int write_buf2_multi(int fd, const char* src, int pattern_pos, int old_pattern_e
  * Replace pattern with the buffer. buf contains bytes that should substitute the pattern
  * This function may be called repeatedly
  */
-void replace_buf2(int fd, const char* buf, const size_t buf_size)
+int replace_buf2(int fd, const char* buf, const size_t buf_size, int add_newline)
 {
+	if (add_newline)
+	{
+		ssize_t bytes = write(fd, "\n", 1);
+		if (bytes <= 0)
+		{
+			fmt_error("replace_buf2()", "write");
+			return 0;
+		}
+	}
+
 	int written = 0;
 	do {
 		ssize_t bytes = write(fd, buf, buf_size - written);
 		if (bytes == -1)
 		{
-			// handle err
+			fmt_error("replace_buf2()", "write");
+			return 0;
 		}
 		written += bytes;
 	} while (unlikely(written < buf_size));
+	return 1;
 }
 
 
@@ -161,7 +189,7 @@ void replace_buf2(int fd, const char* buf, const size_t buf_size)
  * pattern_pos should indicate the position from where to write
  * This function is only used in single-pattern logic
  */
-void write_buf2_end(int fd, const char* src, int pattern_pos, const int pattern_size, const int buf_size)
+int write_buf2_end(int fd, const char* src, int pattern_pos, const int pattern_size, const int buf_size)
 {
 	int offset, total;
 	if (pattern_pos == -1)
@@ -173,7 +201,7 @@ void write_buf2_end(int fd, const char* src, int pattern_pos, const int pattern_
 		// We need to move the rest of the pattern to the end
 		offset = pattern_pos + pattern_size;
 		if (offset >= buf_size)
-			return; // nothing to do
+			return 1; // nothing to do
 		total = buf_size - offset;
 	}
 	
@@ -182,10 +210,12 @@ void write_buf2_end(int fd, const char* src, int pattern_pos, const int pattern_
 		ssize_t bytes = write(fd, src + offset, total - written);
 		if (bytes == -1)
 		{
-			// handle err
+			fmt_error("write_buf2_end()", "write");
+			return 0;
 		}
 		written += bytes;
 	} while (unlikely(written < total));
+	return 1;
 }
 
 

@@ -1,14 +1,18 @@
 #include <getopt.h>
+#include <signal.h>
 
 #include "replace.h"
 
 
-void close_fd(int in_fd, int out_fd, int subst_fd)
+
+void log_open_error()
 {
-	if (in_fd != -1) close(in_fd);
-	if (out_fd != -1) close(out_fd);
-	if (subst_fd != -1) close(subst_fd);
+	printf("open() failed : %s\n", strerror(errno));
+	#ifdef ENABLE_DEBUG
+	raise(SIGTRAP);
+	#endif
 }
+
 
 #define INJECT_PATH_MAX 256
 
@@ -35,49 +39,60 @@ int output_logic(char* output, int* in_fd, int* out_fd)
 	// last operation
 	if (strcmp(prev, "template") != 0)
 	{
-		// then we have to move this file to .template.bak
+		// the file does not end with .template and we have to move the existing file to .template.bak
 		char new_fname[INJECT_PATH_MAX];
-		// add the last token, since it's likely "smali"
+		// add the last token, since it should be "smali"
 		strcat(fname, ".");
 		strcat(fname, prev);
 		
 		strcpy(new_fname, fname);
 		strcat(new_fname, ".template.bak");
 
-		if (!rename(fname, new_fname))
+		#ifdef ENABLE_DEBUG
+		printf("opening (%s -> %s) for reading, %s for writing...\n", fname, new_fname, fname);
+		#endif
+
+		if (rename(fname, new_fname) == -1)
 		{
-			// handle err
+			log_open_error();
 			return 0;
 		}
 
 		*in_fd = open(new_fname, O_RDONLY, 0640);
 		if (*in_fd == -1)
 		{
-			// handle err
+			log_open_error();
 			return 0;
 		}
 
 		*out_fd = open(fname, O_WRONLY|O_CREAT|O_TRUNC, 0640);
 		if (*out_fd == -1)
 		{
+			log_open_error();
 			close_fd(*in_fd, *out_fd, -1);
-			// handle err
 			return 0;
 		}
 	} else {
 		// Output .smali file
+		#ifdef ENABLE_DEBUG
+		printf("opening %s for writing", fname);
+		#endif
 		*out_fd = open(fname, O_WRONLY|O_CREAT|O_TRUNC, 0640);
 		if (*out_fd == -1)
 		{
-			// handle err
+			printf("...\n");
+			log_open_error();
 			return 0;
 		}
 		strcat(fname, ".template");
-		*in_fd = open(fname, O_WRONLY, 0640);
+		#ifdef ENABLE_DEBUG
+		printf(", %s for reading...\n", fname);
+		#endif
+		*in_fd = open(fname, O_RDONLY, 0640);
 		if (*in_fd == -1)
 		{
+			log_open_error();
 			close_fd(*in_fd, *out_fd, -1);
-			// handle err
 			return 0;
 		}
 	}
@@ -155,6 +170,7 @@ int main(int argc, char** argv)
 	}
 	if (!output_logic(output, &in_fd, &out_fd))
 	{
+		log_open_error();
 		return 1;
 	}
 
@@ -165,35 +181,41 @@ int main(int argc, char** argv)
 		subst_fd = open(subst_file, O_RDONLY, 0640);
 		if (subst_fd == -1)
 		{
+			log_open_error();
 			close_fd(in_fd, out_fd, -1);
-			// handle err
 			return 1;
 		}
 	}
 	
 	// handle command
+	int ok;
 	if (strcmp(cmd, "locals") == 0)
 	{
 		static char pattern[] = "__ENX_LOCALS_NUM__";
-		replace_single(in_fd, out_fd, subst_fd, pattern, sizeof(pattern) - 1, 0);
+		ok = replace_single(in_fd, out_fd, subst_fd, pattern, sizeof(pattern) - 1, 0);
 	}
 	else if (strcmp(cmd, "init") == 0)
 	{
 		static char pattern[] = "#__ENX_CONSTRUCTOR_INIT__";
-		replace_single(in_fd, out_fd, subst_fd, pattern, sizeof(pattern) - 1, 1);
+		ok = replace_single(in_fd, out_fd, subst_fd, pattern, sizeof(pattern) - 1, 1);
 	}
 	else if (strcmp(cmd, "methods") == 0)
 	{
 		static char pattern[] = "#__ENX_DEFAULT_OBJECT_METHODS__";
-		replace_single(in_fd, out_fd, subst_fd, pattern, sizeof(pattern) - 1, 1);
+		ok = replace_single(in_fd, out_fd, subst_fd, pattern, sizeof(pattern) - 1, 1);
 	} else {
 		printf("Bad command: %s\n", cmd);
 		print_help();
 		close_fd(in_fd, out_fd, subst_fd);
 		return 1;
 	}
-
 	close_fd(in_fd, out_fd, subst_fd);
+	
+	if (!ok)
+	{
+		printf("inject failed\n");
+		return 1;
+	}
 	return 0;
 }
 
