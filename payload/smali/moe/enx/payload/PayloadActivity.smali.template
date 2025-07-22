@@ -1,11 +1,25 @@
 .class public Lmoe/enx/payload/PayloadActivity;
+.super Landroid/app/Activity;
 
+
+#__ENX_FIELDS__
+
+
+.method static constructor <clinit>()V
+    .locals __ENX_CLINIT_LOCALS_NUM__
+
+    #__ENX_CLINIT__
+
+    return-void
+.end method
 
 
 # Activity constructor. The actual code is injected here
-.method static constructor <clinit>()V
+.method public constructor <init>()V
     .locals __ENX_LOCALS_NUM__
 
+    invoke-direct {p0}, Landroid/app/Activity;-><init>()V
+	
     #__ENX_CONSTRUCTOR_INIT__
 
     return-void
@@ -20,7 +34,7 @@
 
 
 # ENXHACK Function to log trace
-# Code usage: invoke-static {}, LCURRENT_FILE;->enxLogStackTrace()V
+# Code usage: invoke-static {}, Lmoe/enx/payload/PayloadActivity;->enxLogStackTrace()V
 
 .method public static enxLogStackTrace()V
     .locals 3
@@ -53,7 +67,7 @@
 
 
 # ENXHACK Function to log a string
-# Code usage: invoke-static {STRING_REGISTER}, LCURRENT_FILE;->enxLog(Ljava/lang/String)V
+# Code usage: invoke-static {STRING_REGISTER}, Lmoe/enx/payload/PayloadActivity;->enxLog(Ljava/lang/String;)V
 
 .method public static enxLog(Ljava/lang/String;)V
     .locals 2

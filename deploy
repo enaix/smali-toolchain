@@ -6,12 +6,32 @@ adb devices
 
 adb install ./payload/dist/payload.apk
 
-CUR_TIME=$(date +"%m-%d %H:%M:%S.000")
+CUR_TIME=$(adb shell date +\"%m-%d %H:%M:%S.000\")
 
 # run the payload
 adb shell am start -n moe.enx.payload/moe.enx.payload.PayloadActivity
 
 # clear, gather the logs and find ENXHACK
+
+OUTPUT=$(adb logcat -t "$CUR_TIME")
+
+echo "-----verbose-logs-----"
+
+echo -e "$OUTPUT" | grep "moe.enx.payload" || true
+
+echo -e "--end-of-verbose-logs-\n\n"
+
+
+echo "----payload-logs------"
+
+# first we filter out anything but warnings and errors
+echo -e "$OUTPUT" | grep -A 1 -B 1 '^..-.. ..:..:..\....  [0-9]*  [0-9]* [WEF]' | grep "moe.enx.payload" || true
+
+echo -e "--end-of-payload-logs-\n\n"
+
 echo "-------payload--------"
-adb logcat -t "$CUR_TIME"
+
+
+echo -e "$OUTPUT" | grep ENXHACK || true
+
 echo "----end of payload----"

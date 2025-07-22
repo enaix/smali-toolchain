@@ -18,8 +18,11 @@ Inject smali payload code into the FILE template. If INPUT is not given, reads c
 
 COMMAND specifies where to inject the code:
   locals         	set the number of local variables, can be injected only once
+  clinit_locals  	set the number of local variables in clinit, can be injected only once
   init           	inject the code to the main class constructor, can be done multiple times
+  clinit         	inject the code in the static initializer (clinit), can be done multiple times
   methods        	inject new methods to the main class, can be done multiple ones
+  fields         	inject class fields, can be done multiple times
 
 OPTION may be the following:
   -h, --help     	print this message and exit

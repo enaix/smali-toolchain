@@ -108,8 +108,11 @@ void print_help()
 		"Inject smali payload code into the FILE template. If INPUT is not given, reads code from STDIN.\n\n"
 		"COMMAND specifies where to inject the code:\n"
 		"  locals         \tset the number of local variables, can be injected only once\n"
+		"  clinit_locals  \tset the number of local variables in clinit, can be injected only once\n"
 		"  init           \tinject the code to the main class constructor, can be done multiple times\n"
-		"  methods        \tinject new methods to the main class, can be done multiple ones\n\n"
+		"  clinit         \tinject the code in the static initializer (clinit), can be done multiple times\n"
+		"  methods        \tinject new methods to the main class, can be done multiple ones\n"
+		"  fields         \tinject class fields, can be done multiple times\n\n"
 		"OPTION may be the following:\n"
 		"  -h, --help     \tprint this message and exit\n"
 		"  -f, --file=INPUT\tinject the code from INPUT\n"
@@ -194,14 +197,29 @@ int main(int argc, char** argv)
 		static char pattern[] = "__ENX_LOCALS_NUM__";
 		ok = replace_single(in_fd, out_fd, subst_fd, pattern, sizeof(pattern) - 1, 0);
 	}
+	else if (strcmp(cmd, "clinit_locals") == 0)
+	{
+		static char pattern[] = "__ENX_CLINIT_LOCALS_NUM__";
+		ok = replace_single(in_fd, out_fd, subst_fd, pattern, sizeof(pattern) - 1, 0);
+	}
 	else if (strcmp(cmd, "init") == 0)
 	{
 		static char pattern[] = "#__ENX_CONSTRUCTOR_INIT__";
 		ok = replace_single(in_fd, out_fd, subst_fd, pattern, sizeof(pattern) - 1, 1);
 	}
+	else if (strcmp(cmd, "clinit") == 0)
+	{
+		static char pattern[] = "#__ENX_CLINIT__";
+		ok = replace_single(in_fd, out_fd, subst_fd, pattern, sizeof(pattern) - 1, 1);
+	}
 	else if (strcmp(cmd, "methods") == 0)
 	{
 		static char pattern[] = "#__ENX_DEFAULT_OBJECT_METHODS__";
+		ok = replace_single(in_fd, out_fd, subst_fd, pattern, sizeof(pattern) - 1, 1);
+	} 
+	else if (strcmp(cmd, "fields") == 0)
+	{
+		static char pattern[] = "#__ENX_FIELDS__";
 		ok = replace_single(in_fd, out_fd, subst_fd, pattern, sizeof(pattern) - 1, 1);
 	} else {
 		printf("Bad command: %s\n", cmd);
